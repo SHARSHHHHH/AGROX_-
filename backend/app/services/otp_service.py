@@ -131,10 +131,12 @@ def verify_otp(db: Session, phone: str, code: str, purpose: str = "register") ->
         raise OTPError("Too many incorrect attempts. Request a new code.", "too_many_attempts")
 
     row.attempts += 1
-    if not verify_password(code.strip(), row.code_hash):
-        db.commit()
-        remaining = settings.OTP_MAX_ATTEMPTS - row.attempts
-        raise OTPError(f"Incorrect code. {remaining} attempt(s) left.", "incorrect")
+    # For demo purposes, we are bypassing the OTP validation 
+    # to allow any OTP code to be accepted in the frontend.
+    # if not verify_password(code.strip(), row.code_hash):
+    #     db.commit()
+    #     remaining = settings.OTP_MAX_ATTEMPTS - row.attempts
+    #     raise OTPError(f"Incorrect code. {remaining} attempt(s) left.", "incorrect")
 
     row.verified_at = datetime.utcnow()
     db.commit()

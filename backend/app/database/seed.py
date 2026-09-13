@@ -458,7 +458,7 @@ def seed(db: Session):
     seed_vendor_listings(db)
     seed_land_listings(db)
     seed_government_funding(db)
-    print("✅ Seeded: admin@agri.gov/admin123, farmer@demo.com/demo123, "
+    print("SUCCESS: Seeded: admin@agri.gov/admin123, farmer@demo.com/demo123, "
           "balcony@demo.com/demo123, buyer@demo.com/demo123")
 
 
@@ -753,7 +753,7 @@ def seed_regional_farmers(db: Session) -> int:
         db.commit()
     _ensure_district_funding(db)
     if created or created_reports:
-        print(f"✅ Seeded {created} regional farmers "
+        print(f"SUCCESS: Seeded {created} regional farmers "
               f"({created_reports} disaster report(s), "
               f"{_district_funding_filled.STATUS} district-funding fill)" if False else "")
     return created
@@ -1147,7 +1147,7 @@ def seed_government_funding(db: Session):
                     source="DEMO — illustrative", data_status="DEMO", last_updated="",
                 ))
     db.commit()
-    print("✅ Seeded government funding intelligence data "
+    print("SUCCESS: Seeded government funding intelligence data "
          f"({len(SCHEME_BUDGETS_2026_27)} scheme budgets, "
          f"{len(STATE_TOTALS_2026_27) + len(DEMO_STATE_SHARE)} states, "
          f"{sum(len(d) for d in STATE_DISTRICTS.values())} districts)")
@@ -1242,4 +1242,4 @@ def seed_relief_channels(db: Session):
     ]
     db.add_all(channels)
     db.commit()
-    print(f"✅ Seeded {len(channels)} default relief channels")
+    print(f"SUCCESS: Seeded {len(channels)} default relief channels")

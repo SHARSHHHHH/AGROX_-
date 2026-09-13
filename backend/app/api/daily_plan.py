@@ -6,13 +6,20 @@ GET  /api/daily-plan/history   — last N days of stored plans
 """
 from datetime import date, timedelta
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database.db import get_db
 from app.models.models import DailyPlan, Farm, User
 from app.core.security import get_current_user
 from app.services.daily_planner import generate_daily_plan, _today_str
+
+class CustomTaskIn(BaseModel):
+    period: str
+    time: str
+    task: str
+    priority: str = "medium"
 
 router = APIRouter(prefix="/api/daily-plan", tags=["daily-plan"])
 
@@ -124,3 +131,43 @@ def history(days: int = 7, user: User = Depends(get_current_user),
              "data_sources": r.data_sources, "language": r.language,
              "status": r.status}
             for r in rows]
+
+@router.post("/add-task")
+async def add_task(data: CustomTaskIn, language: str = Depends(_lang), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    today_str = _today_str()
+    existing = db.query(DailyPlan).filter(DailyPlan.user_id == user.id, DailyPlan.plan_date == today_str).first()
+    if not existing:
+        raise HTTPException(400, "No plan exists for today. Please wait for the daily plan to generate first.")
+    
+    tasks = existing.tasks.copy() if existing.tasks else {"morning": [], "afternoon": [], "evening": []}
+    if data.period not in tasks:
+        tasks[data.period] = []
+        
+    tasks[data.period].append({
+        "time": data.time,
+        "task": data.task,
+        "priority": data.priority,
+        "source": "farmer",
+        "detail": "Manually added task"
+    })
+    
+    # Sort tasks by time string (e.g. "08:00 AM")
+    def sort_key(t):
+        try:
+            return datetime.strptime(t['time'], "%I:%M %p")
+        except:
+            return t['time']
+            
+    # We need datetime for sorting
+    from datetime import datetime
+    for period in tasks:
+        tasks[period] = sorted(tasks[period], key=sort_key)
+        
+    existing.tasks = tasks
+    
+    # SQLAlchemy JSON mutations require flagging as modified or replacing the object
+    from sqlalchemy.orm.attributes import flag_modified
+    flag_modified(existing, "tasks")
+    
+    db.commit()
+    return {"tasks": tasks, "status": "success"}
