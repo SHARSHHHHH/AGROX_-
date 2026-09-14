@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AGROX</string>
+    <string name="title_activity_main">AGROX</string>
+    <string name="package_name">agri.advisor.app</string>
+    <string name="custom_url_scheme">agri.advisor.app</string>
+</resources>
