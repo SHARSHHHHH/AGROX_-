@@ -286,3 +286,6 @@ for r in (auth_router, farm_router, iot_router, soil_router, weather_router,
 # Serve uploaded images
 os.makedirs("uploads", exist_ok=True)
 app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
+from app.product_routes import router as product_router
+
+app.include_router(product_router)
