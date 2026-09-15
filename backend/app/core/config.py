@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     # frontend/APK. SMS_PROVIDER stays "log" (dev/demo) until that's done.
     SMS_PROVIDER: str = "log"
     SMS_API_KEY: str = ""
+    # sms-gate.app credentials
+    SMS_GATE_USERNAME: str = ""
+    SMS_GATE_PASSWORD: str = ""
+    SMS_GATE_URL: str = "https://api.sms-gate.app/3rdparty/v1/message"
     OTP_LENGTH: int = 6
     OTP_EXPIRE_MINUTES: int = 10
     OTP_MAX_ATTEMPTS: int = 5

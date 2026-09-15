@@ -72,6 +72,9 @@ def request_otp(data: OTPRequestIn, db: Session = Depends(get_db)):
         return otp_service.request_otp(db, data.phone, data.purpose)
     except OTPError as e:
         raise HTTPException(400, e.args[0])
+    except Exception as e:
+        # SMS gateway connectivity failure — tell the client clearly.
+        raise HTTPException(502, f"Could not send SMS: {e}")
 
 
 @router.post("/otp/verify")

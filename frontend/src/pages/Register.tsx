@@ -56,9 +56,15 @@ export default function Register() {
   const [showFarmerPassword, setShowFarmerPassword] = useState(false)
   const [showFarmerConfirm, setShowFarmerConfirm] = useState(false)
   const [cooldown, setCooldown] = useState(0)
+  const [otpExpiry, setOtpExpiry] = useState(0)   // countdown in seconds
+  const [deliveryMethod, setDeliveryMethod] = useState<'sms_gate' | 'log'>('sms_gate')
   const cooldownRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const expiryRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  useEffect(() => () => { if (cooldownRef.current) clearInterval(cooldownRef.current) }, [])
+  useEffect(() => () => {
+    if (cooldownRef.current) clearInterval(cooldownRef.current)
+    if (expiryRef.current) clearInterval(expiryRef.current)
+  }, [])
 
   const startCooldown = (seconds: number) => {
     setCooldown(seconds)
@@ -71,12 +77,27 @@ export default function Register() {
     }, 1000)
   }
 
+  const startExpiryCountdown = (seconds: number) => {
+    setOtpExpiry(seconds)
+    if (expiryRef.current) clearInterval(expiryRef.current)
+    expiryRef.current = setInterval(() => {
+      setOtpExpiry((c) => {
+        if (c <= 1 && expiryRef.current) { clearInterval(expiryRef.current); return 0 }
+        return c - 1
+      })
+    }, 1000)
+  }
+
+  const formatTime = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
+
   const sendOtp = async () => {
     setLoading(true); setErr('')
     try {
       const res = await requestOtp(phone, 'register')
       setFarmerStep('otp')
+      setDeliveryMethod(res.delivery || 'sms_gate')
       startCooldown(res.resend_after_seconds || 30)
+      startExpiryCountdown(res.expires_in_seconds || 600)
     } catch (e: any) {
       setErr(e.response?.data?.detail || 'Could not send OTP.')
     } finally {
@@ -156,15 +177,32 @@ export default function Register() {
 
             {farmerStep === 'otp' && (
               <form onSubmit={doVerifyOtp} className="space-y-3">
-                <p className="text-sm text-gray-500">
-                  {t('register.otpsentto')} <span className="font-semibold text-field-700">+91 {phone}</span>.
-                </p>
+                {/* SMS sent confirmation */}
+                {deliveryMethod === 'sms_gate' ? (
+                  <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3">
+                    <p className="text-sm font-semibold text-green-800">📱 SMS sent to +91 {phone}</p>
+                    <p className="text-xs text-green-700 mt-0.5">
+                      Enter the 6-digit code from the SMS.
+                      {otpExpiry > 0 && <span className="font-semibold"> Expires in {formatTime(otpExpiry)}.</span>}
+                      {otpExpiry === 0 && <span className="font-semibold text-red-600"> Code expired — request a new one.</span>}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                    <p className="text-sm font-semibold text-amber-800">⚠️ SMS gateway offline</p>
+                    <p className="text-xs text-amber-700 mt-0.5">
+                      The OTP code has been printed in the <strong>backend terminal</strong>. Check the console running uvicorn.
+                      {otpExpiry > 0 && <span className="font-semibold"> Expires in {formatTime(otpExpiry)}.</span>}
+                      {otpExpiry === 0 && <span className="font-semibold text-red-600"> Code expired — request a new one.</span>}
+                    </p>
+                  </div>
+                )}
                 <input required placeholder={t('register.enterotp')} value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
                   inputMode="numeric" maxLength={6}
                   className={`${inputClass} text-center tracking-[0.5em] font-semibold`} />
                 {err && <p className="text-sm text-red-600">{err}</p>}
-                <button type="submit" disabled={loading || otp.length !== 6}
+                <button type="submit" disabled={loading || otp.length !== 6 || otpExpiry === 0}
                   className="w-full bg-field-600 hover:bg-field-700 text-white font-semibold py-2.5 rounded-xl disabled:opacity-50">
                   {loading ? t('register.verifying') : t('register.verifyotp')}
                 </button>
